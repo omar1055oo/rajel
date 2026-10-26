@@ -1,0 +1,31 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isMember() {
+      return request.auth != null &&
+             request.auth.uid in ['UID_A', 'UID_B'];
+    }
+    match /users/{uid} {
+      allow read: if isMember();
+      allow write: if isMember() && request.auth.uid == uid;
+    }
+    match /tasks/{id} {
+      allow read: if isMember();
+      allow create: if isMember() && request.resource.data.ownerUid == request.auth.uid;
+      allow update, delete: if isMember() && resource.data.ownerUid == request.auth.uid;
+    }
+    match /points/{id} {
+      allow read: if isMember();
+      allow create: if isMember() && request.resource.data.uid == request.auth.uid;
+      // إضافة على الخطة: لازم الحذف عشان إلغاء تعليم المهمة يمسح نقاطها
+      allow delete: if isMember() && resource.data.uid == request.auth.uid;
+    }
+    match /sessions/{id} {
+      allow read, write: if isMember();
+    }
+    match /messages/{id} {
+      allow read: if isMember();
+      allow create: if isMember() && request.resource.data.fromUid == request.auth.uid;
+    }
+  }
+}
